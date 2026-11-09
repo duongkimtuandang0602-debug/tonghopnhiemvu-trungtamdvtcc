@@ -19,6 +19,6 @@ window.APP_CONFIG = {
     salt: 'd4b5d8f7b5c64d7c3868de5a16ab1b0f07885262',
     passwordHash: '3542a022b5bfc2268a64d2f85879225b652dc945a0097a3675969588ae6647ec'
   },
-  SYNC_URL: '',
+  SYNC_URL: 'https://script.google.com/macros/s/AKfycbyEEnp8JgkAngtX1dFpEM9l0bEAT0_r8E-14ZphNtCNK6Eupvck_OrxHMUkLhyKqW_-yw/exec',
   SYNC_INTERVAL_MS: 15000
 };
