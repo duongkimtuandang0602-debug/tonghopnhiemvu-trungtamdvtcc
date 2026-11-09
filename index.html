@@ -91,7 +91,7 @@ body { background: radial-gradient(ellipse at 96% 0%, #EAF6ED 0, transparent 32%
 .auth-shell{min-height:100vh;background:radial-gradient(circle at 15% 15%,#D9F5E6 0%,transparent 35%),radial-gradient(circle at 90% 0%,#FCF7E8 0%,transparent 38%),linear-gradient(135deg,#F4FAF6,#EAF5EE);display:grid;place-items:center;padding:28px 18px}
 .auth-card{width:min(100%,470px);background:#FFFEFD;border:1px solid #DDEDE3;border-radius:22px;box-shadow:0 26px 74px rgba(24,82,54,.12);padding:34px}
 .auth-brand{display:flex;align-items:center;gap:13px;padding-bottom:23px;border-bottom:1px solid #EBF2ED}.auth-badge{background:linear-gradient(135deg,#0B7755,#1B9A73);color:white;display:grid;place-items:center;flex-shrink:0;width:53px;height:53px;border-radius:17px;font-weight:900;letter-spacing:1px;box-shadow:0 8px 18px #087c5733}.auth-brand strong{color:#1A533B;font-size:12px;line-height:1.6;display:block}.auth-brand span{color:#6D897B;font-size:11px;display:block;margin-top:2px}.auth-title h1{font-size:25px;margin:26px 0 8px;color:#1B4A34;letter-spacing:-.6px}.auth-title p{font-size:13px;line-height:1.7;color:#6F8577;margin-bottom:22px}.auth-form{display:grid;gap:16px}.auth-form label{color:#416753;font-size:12px;font-weight:750;display:grid;gap:7px}.auth-form input{border-radius:11px;padding:13px;border:1px solid #D4E6DB;background:#fff;outline:0;font-size:14px;width:100%;color:#273F32}.auth-form input:focus{border-color:#10815C;box-shadow:0 0 0 4px #0d8a6018}.auth-form .btn{margin-top:7px;font-size:14px;padding:14px}.auth-error{font-size:12px;color:#AD3B43;line-height:1.5;min-height:17px}.auth-note{margin-top:23px;font-size:11px;line-height:1.75;color:#7B8C80;background:#F3F8F3;padding:14px;border:1px solid #E7EEE8;border-radius:12px}.useridentity{white-space:nowrap}.topbar .right{flex-wrap:wrap}@media(max-width:700px){.auth-card{padding:22px;border-radius:16px}.topbar .right{gap:5px}.useridentity{font-size:11px!important}}
-</style></head><body><div id="app"></div><script>'use strict';
+</style></head><body><div id="app"></div><script src="config.js"></script><script>'use strict';
 const ORG='TRUNG TÂM DỊCH VỤ TÀI CHÍNH CÔNG HÀ TĨNH';
 const DEPTS=[{id:'HCTH',name:'Hành chính – Tổng hợp',short:'HCTH',article:'Điều 3'},{id:'DVTH',name:'Dịch vụ tổng hợp',short:'Dịch vụ tổng hợp',article:'Điều 5'},{id:'DVC',name:'Dịch vụ công',short:'Dịch vụ công',article:'Điều 4'}];
 const GROUPS=[
@@ -123,7 +123,11 @@ const GROUPS=[
 ['DC10','DVC','Báo cáo và nhiệm vụ khác','Điều 4, khoản 12–13','Báo cáo định kỳ, đột xuất, nhiệm vụ khác được giao']
 ].map(([id,dept,title,clauses,detail])=>({id,dept,title,clauses,detail}));
 const CASE_STATUS={received:'Đã tiếp nhận',reviewing:'Đang thẩm tra',waiting:'Chờ chủ đầu tư bổ sung',ready:'Trình lãnh đạo',returned:'Đã trả hồ sơ',issued:'Đã ban hành'};
-const ROLE_LABELS={admin:'Admin · Lãnh đạo Trung tâm',leader:'Lãnh đạo các phòng',hcth_staff:'Chuyên viên HCTH',technical_staff:'Chuyên viên DVC / DVTH',accountant:'Kế toán HCTH'};
+const ROLE_LABELS={admin:'Admin · Lãnh đạo Trung tâm',leader:'Lãnh đạo các phòng',hcth_staff:'Chuyên viên HCTH',dvc_staff:'Chuyên viên DVC',dvth_staff:'Chuyên viên DVTH',accountant:'Kế toán HCTH'};
+/* Chuyên viên DVC và Chuyên viên DVTH là 2 vai trò riêng nhưng dùng chung một bộ quyền */
+const TECH_ROLES=['dvc_staff','dvth_staff'];
+const isTech=(r=role)=>TECH_ROLES.includes(r);
+const LEGACY_ROLE={technical_staff:'dvc_staff'};
 const USERS_KEY='TT_HT_LOCAL_USERS_V2',SESSION_KEY='TT_HT_SESSION_V2';
 const NAV_PRIMARY=[['overview','◫','Tổng quan Trung tâm'],['dept-HCTH','▤','Hành chính – Tổng hợp'],['dept-DVTH','▤','Dịch vụ tổng hợp'],['dept-DVC','▤','Dịch vụ công'],['groups','◈','Nhiệm vụ tổng thể']];
 const NAV_SECONDARY=[['cases','▣','Thẩm tra quyết toán'],['revenue','₫','Nguồn thu quyết toán'],['approvals','✓','Chờ phê duyệt'],['history','◷','Lịch sử cập nhật'],['guide','ⓘ','Hướng dẫn sử dụng']];
@@ -133,14 +137,15 @@ const CAN_VIEW={
  admin:['overview','dept-HCTH','dept-DVTH','dept-DVC','groups','cases','revenue','approvals','history','guide','users'],
  leader:['overview','dept-HCTH','dept-DVTH','dept-DVC','groups','cases','revenue','approvals','history','guide'],
  hcth_staff:['overview','dept-HCTH'],
- technical_staff:['overview','dept-DVC','cases','revenue','approvals','history','guide'],
+ dvc_staff:['overview','dept-DVC','cases','revenue','approvals','history','guide'],
+ dvth_staff:['overview','dept-DVC','cases','revenue','approvals','history','guide'],
  accountant:['cases','revenue','approvals','history','guide']
 };
 const canPage=(id)=>!!AUTH&&!!CAN_VIEW[role]?.includes(id);
 const canFull=()=>FULL_ROLES.includes(role);
-const canCreateTask=(department)=>canFull()||(role==='hcth_staff'&&department==='HCTH')||(role==='technical_staff'&&department==='DVC');
+const canCreateTask=(department)=>canFull()||(role==='hcth_staff'&&department==='HCTH')||(isTech()&&department==='DVC');
 const canEditTask=(task)=>!!task&&canCreateTask(task.department);
-const canCreateCase=()=>canFull()||role==='technical_staff';
+const canCreateCase=()=>canFull()||isTech();
 const canEditCase=()=>canCreateCase();
 const canApprove=()=>canFull();
 const canViewFinance=()=>canPage('revenue');
@@ -174,6 +179,7 @@ function persist(action='',kind='',id='',detail=''){
  if(action)DB.history.unshift({id:uid(),at:new Date().toISOString(),action,kind,itemId:id,detail,role:roleName(role),actor:AUTH.username,actorName:AUTH.fullname});
  if(DB.history.length>3000)DB.history.length=3000;
  try{localStorage.setItem(STORAGE,JSON.stringify(DB));offlineSaveFail=false}catch(e){offlineSaveFail=true;console.warn('Không lưu được localStorage:',e)}
+ syncSchedule();
  render();
 }
 
@@ -188,7 +194,7 @@ const tracked=()=>DB.tasks.filter(t=>monthTask(t));
 const pill=(value)=>{let c=/ĐÚNG HẠN|Đã ban hành|Đã xác nhận/.test(value)?'green':/QUÁ HẠN|TRỄ HẠN/.test(value)?'red':/SẮP HẠN|CHỜ|Chờ|Trình/.test(value)?'amber':'blue';return `<span class="pill ${c}">${html(value)}</span>`};
 const taskApproved=t=>!!(t.verifiedAt&&t.approval==='approved');
 function allowEditTask(t){return canEditTask(t) && (!taskApproved(t)||canCloseReport());}
-function allowCreate(){return canFull()||role==='hcth_staff'||role==='technical_staff';}
+function allowCreate(){return canFull()||role==='hcth_staff'||isTech();}
 function allowApprove(){return canApprove();}
 function allowCaseEdit(){return canEditCase();}
 function allowFinance(){return canViewFinance();}
@@ -200,7 +206,7 @@ function render(){
  if(!canPage(page))page=landingPage();
  const section=(items)=>items.filter(([id])=>canPage(id)).map(([id,ico,name])=>`<button type="button" class="navbtn ${page===id?'active':''}" data-page="${id}"><span>${ico}</span><span>${name}</span></button>`).join('');
  const primary=section(NAV_PRIMARY),secondary=section(NAV_SECONDARY),admin=section(NAV_ADMIN);
- root.innerHTML=`<div class="app"><aside class="sidebar"><div class="mark"><span class="logo">TT</span><div><b>TRUNG TÂM</b><small>Dịch vụ tài chính công Hà Tĩnh</small></div></div>${primary?'<div class="navsection">QUẢN LÝ & ĐIỀU HÀNH</div><nav class="nav">'+primary+'</nav>':''}${secondary?'<div class="navsection">HỒ SƠ & NGUỒN THU</div><nav class="nav">'+secondary+'</nav>':''}${admin?'<div class="navsection">QUẢN TRỊ HỆ THỐNG</div><nav class="nav">'+admin+'</nav>':''}<div class="navfoot"><b>PHẠM VI TRUY CẬP</b><br/>${html(roleName(role))}<br/>Tài khoản: <b>${html(AUTH.username)}</b><br/><span class="smallmuted">Dữ liệu lưu tại trình duyệt này.</span></div></aside><div class="main"><header class="topbar"><strong>HỆ THỐNG ĐIỀU HÀNH NHIỆM VỤ</strong><div class="right"><span class="chip">● Đã đăng nhập</span><span class="useridentity" style="font-size:12px;color:var(--ink)">${html(AUTH.fullname)}<small style="display:block;color:var(--muted)">${html(roleName(role))}</small></span><button class="btn small" data-action="change-password">Đổi mật khẩu</button><button class="btn small" data-action="logout">Đăng xuất</button></div></header><main class="content">${renderPage()}<div class="footerbar"><span>${ORG} · Hệ thống quản lý nội bộ</span><span>Phiên bản HTML thuần · localStorage từng trình duyệt · Không đồng bộ máy khác</span></div></main></div></div><div id="modalhost"></div>`;
+ root.innerHTML=`<div class="app"><aside class="sidebar"><div class="mark"><span class="logo">TT</span><div><b>TRUNG TÂM</b><small>Dịch vụ tài chính công Hà Tĩnh</small></div></div>${primary?'<div class="navsection">QUẢN LÝ & ĐIỀU HÀNH</div><nav class="nav">'+primary+'</nav>':''}${secondary?'<div class="navsection">HỒ SƠ & NGUỒN THU</div><nav class="nav">'+secondary+'</nav>':''}${admin?'<div class="navsection">QUẢN TRỊ HỆ THỐNG</div><nav class="nav">'+admin+'</nav>':''}<div class="navfoot"><b>PHẠM VI TRUY CẬP</b><br/>${html(roleName(role))}<br/>Tài khoản: <b>${html(AUTH.username)}</b><br/><span class="smallmuted" id="syncnote">${syncLabel()}</span></div></aside><div class="main"><header class="topbar"><strong>HỆ THỐNG ĐIỀU HÀNH NHIỆM VỤ</strong><div class="right"><span class="chip">● Đã đăng nhập</span><span class="useridentity" style="font-size:12px;color:var(--ink)">${html(AUTH.fullname)}<small style="display:block;color:var(--muted)">${html(roleName(role))}</small></span><button class="btn small" data-action="change-password">Đổi mật khẩu</button><button class="btn small" data-action="logout">Đăng xuất</button></div></header><main class="content">${renderPage()}<div class="footerbar"><span>${ORG} · Hệ thống quản lý nội bộ</span><span>Phiên bản HTML thuần · localStorage từng trình duyệt · Không đồng bộ máy khác</span></div></main></div></div><div id="modalhost"></div>`;
 }
 
 function renderPage(){if(!canPage(page))return '<div class="panel">Không có quyền truy cập.</div>';if(page.startsWith('dept-'))return renderDept(page.slice(5));return ({overview:renderOverview,groups:renderGroups,cases:renderCases,revenue:renderRevenue,approvals:renderApprovals,history:renderHistory,guide:renderGuide,users:renderUsers}[page]||renderOverview)()}
@@ -230,7 +236,7 @@ const formArea=(label,name,val='')=>`<div class="field full"><label for="f_${nam
 const formSelect=(label,name,options,val='',extra='')=>`<div class="field"><label for="f_${name}">${html(label)}</label><select name="${name}" id="f_${name}" ${extra}>${options.map(o=>`<option value="${html(o.value)}" ${String(o.value)===String(val)?'selected':''}>${html(o.label)}</option>`).join('')}</select></div>`;
 const selectDepts=DEPTS.map(d=>({value:d.id,label:d.name}));
 function openTaskForm(id='',depId='HCTH'){
- if(!id&&!canFull())depId=role==='technical_staff'?'DVC':'HCTH';
+ if(!id&&!canFull())depId=isTech()?'DVC':'HCTH';
  const old=DB.tasks.find(t=>t.id===id);if(old&&!canEditTask(old))return toast('Tài khoản không có quyền sửa nhiệm vụ này');if(!old&&!canCreateTask(depId))return toast('Tài khoản không có quyền tạo nhiệm vụ cho phòng này.');if(old&&taskApproved(old))return toast('Nhiệm vụ đã duyệt. Lãnh đạo Trung tâm cần mở khóa trước khi sửa.');
  const t=old||{id:'',department:depId,groupId:GROUPS.find(g=>g.dept===depId).id,title:'',assignee:'',collaborators:'',assignedAt:today(),dueAt:today(),completedAt:'',evidence:'',notes:''};
  const canMaster=canFull()||!old;
@@ -352,9 +358,82 @@ function submitReport(){if(!canSubmitReport())return toast('Chỉ HCTH hoặc l�
 function closeReport(){if(!canCloseReport())return toast('Chỉ admin / Lãnh đạo Trung tâm được chốt báo cáo');const r=activeReport();if(!r||r.status!=='submitted')return toast('Chưa có báo cáo HCTH trình duyệt');if(!confirm('Chốt và lưu kết quả báo cáo tháng '+r.month+'?'))return;r.status='closed';r.closedAt=new Date().toISOString();r.snapshot=snapshotReport();persist('Chốt báo cáo tháng','Báo cáo',r.month,'Đã lưu bản số liệu chốt');toast('Đã chốt và lưu bản báo cáo')}
 function reopenReport(){if(!canCloseReport())return toast('Chỉ admin / Lãnh đạo Trung tâm được mở lại báo cáo');const r=activeReport();if(!r||r.status!=='closed')return;const reason=prompt('Nhập lý do mở lại báo cáo tháng (ít nhất 5 ký tự):');if(!reason||reason.trim().length<5)return toast('Cần nhập lý do mở lại');r.status='reopened';r.reopenReason=reason;persist('Mở lại báo cáo tháng','Báo cáo',r.month,reason);toast('Đã mở lại báo cáo, dữ liệu chốt cũ vẫn có trong lịch sử')}
 function viewReport(){const r=activeReport();if(!r)return toast('Chưa có bản báo cáo tháng');const s=r.snapshot||{};modal('Báo cáo tháng '+html(r.month),`Trạng thái: ${r.status==='closed'?'Đã chốt':r.status==='submitted'?'Chờ chốt':'Đã mở lại'}`,`<div class="details">${[['Tháng',r.month],['Ngày đối chiếu',fmtDate(s.asOf)],['Tổng nhiệm vụ',s.tasks?.total],['Nhiệm vụ mới',s.tasks?.new],['Nhiệm vụ tồn',s.tasks?.old],['Hoàn thành đã duyệt',s.tasks?.approved],['Quá hạn',s.tasks?.overdue],['Hồ sơ đã tiếp nhận',s.received],['Hồ sơ đã ban hành',s.issued],['Tổng phí thực tế',financeDisplay(s.actual)],['Đã thu',financeDisplay(s.paid)]].map(([a,b])=>`<div><small>${html(a)}</small><strong>${html(b??'—')}</strong></div>`).join('')}</div><div class="notice">Đây là số liệu snapshot tại lần trình/chốt, không tự thay đổi theo lần nhập mới tiếp theo.</div>`,btn('Đóng','close-modal'))}
-/* ĐĂNG NHẬP BASIC KHÔNG API · CHỈ LƯU CỤC BỘ TRÊN TRÌNH DUYỆT */
-function getUsers(){try{const users=JSON.parse(localStorage.getItem(USERS_KEY)||'[]');return Array.isArray(users)?users:[]}catch(e){return []}}
-function saveUsers(users){localStorage.setItem(USERS_KEY,JSON.stringify(users))}
+
+/* ĐỒNG BỘ DỮ LIỆU DÙNG CHUNG (không dùng CSDL) · Google Apps Script lưu 1 file JSON trên Google Drive
+   - Mỗi bản ghi có số phiên bản (rev). Ghi đè chỉ thành công khi rev khớp; nếu máy khác đã ghi trước,
+     trình duyệt tự gộp thay đổi của mình (theo id từng nhiệm vụ / hồ sơ / tài khoản) rồi gửi lại. */
+const SYNC_URL=String(window.APP_CONFIG?.SYNC_URL||'').trim();
+const SYNC_STATE_KEY='TT_HT_SYNC_STATE_V1';
+const SYNC_INTERVAL=Math.max(5000,Number(window.APP_CONFIG?.SYNC_INTERVAL_MS)||15000);
+let SYNC=(()=>{try{const x=JSON.parse(localStorage.getItem(SYNC_STATE_KEY)||'null');if(x&&x.url===SYNC_URL)return {...x,busy:false,timer:null,status:'idle'}}catch(e){}return {url:SYNC_URL,rev:0,base:null,dirty:false,busy:false,timer:null,status:SYNC_URL?'idle':'local',lastOk:''}})();
+function syncSave(){try{localStorage.setItem(SYNC_STATE_KEY,JSON.stringify({url:SYNC.url,rev:SYNC.rev,base:SYNC.base,dirty:SYNC.dirty,lastOk:SYNC.lastOk}))}catch(e){}}
+function syncLabel(){if(!SYNC_URL)return 'Dữ liệu lưu tại trình duyệt này.';const t=SYNC.lastOk?new Date(SYNC.lastOk).toLocaleTimeString('vi-VN'):'—';return SYNC.status==='error'?'⚠ Mất kết nối máy chủ, thay đổi sẽ gửi lại khi có mạng.':SYNC.dirty||SYNC.busy?'⟳ Đang đồng bộ dữ liệu…':'✓ Dữ liệu dùng chung · đồng bộ lúc '+t}
+function syncPaint(){const el=document.querySelector('#syncnote');if(el)el.textContent=syncLabel()}
+function syncDoc(){return {db:DB,users:getUsers()}}
+const jsonEq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function mergeList(base,local,remote,key){
+ const k=x=>x?.[key],B=new Map((base||[]).map(x=>[k(x),x])),L=new Map((local||[]).map(x=>[k(x),x]));
+ const out=[],seen=new Set();
+ for(const r of remote||[]){const id=k(r);seen.add(id);if(B.has(id)&&!L.has(id))continue;const l=L.get(id);out.push(l&&B.has(id)&&!jsonEq(l,B.get(id))?l:r)}
+ for(const l of local||[]){const id=k(l);if(seen.has(id))continue;if(!B.has(id)||!jsonEq(l,B.get(id)))out.push(l)}
+ return out;
+}
+function mergeDoc(base,local,remote){
+ base=base||{db:{},users:[]};const b=base.db||{},l=local.db,r=remote.db||sample();
+ const db={...r,meta:r.meta||l.meta,
+  settings:jsonEq(l.settings,b.settings)?r.settings:l.settings,
+  tasks:mergeList(b.tasks,l.tasks,r.tasks,'id'),cases:mergeList(b.cases,l.cases,r.cases,'id'),
+  reports:mergeList(b.reports,l.reports,r.reports,'month'),
+  history:mergeList(b.history,l.history,r.history,'id').sort((x,y)=>String(y.at).localeCompare(String(x.at))).slice(0,3000)};
+ return {db,users:mergeList(base.users,local.users,remote.users||[],'id')};
+}
+function adoptDoc(doc){
+ const d=doc?.db;DB=(d&&Array.isArray(d.tasks)&&Array.isArray(d.cases)&&d.settings)?d:sample();
+ DB.history=Array.isArray(DB.history)?DB.history:[];DB.reports=Array.isArray(DB.reports)?DB.reports:[];DB.meta=DB.meta||{version:7};
+ try{localStorage.setItem(STORAGE,JSON.stringify(DB))}catch(e){}
+ saveUsers(Array.isArray(doc?.users)?doc.users:[],false);
+ if(AUTH){const me=currentSession();if(!me){signOut();toast('Phiên đăng nhập đã hết hiệu lực (tài khoản bị khóa hoặc đổi mật khẩu).');return}AUTH=me;role=me.role}
+}
+function softRender(){if(!AUTH)return;if(document.querySelector('#modalback'))return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;render()}
+async function syncCall(payload){
+ const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),20000);
+ try{const res=payload?await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),signal:ctrl.signal}):await fetch(SYNC_URL+(SYNC_URL.includes('?')?'&':'?')+'action=get&t='+Date.now(),{signal:ctrl.signal});
+  if(!res.ok)throw Error('HTTP '+res.status);const j=await res.json();if(!j||j.ok===undefined)throw Error('Phản hồi máy chủ không hợp lệ');return j}
+ finally{clearTimeout(t)}
+}
+/* Lấy bản mới nhất; nếu máy này có thay đổi chưa gửi thì gộp rồi đẩy lên */
+async function syncPull(){
+ if(!SYNC_URL||SYNC.busy)return;SYNC.busy=true;syncPaint();
+ try{const j=await syncCall(null);if(!j.ok)throw Error(j.error||'Lỗi máy chủ');
+  const remote=j.doc||{db:sample(),users:[]};
+  if(SYNC.dirty){const merged=mergeDoc(SYNC.base,syncDoc(),remote);SYNC.base=remote;SYNC.rev=j.rev;adoptDoc(merged);SYNC.busy=false;await syncPush();return}
+  if(j.rev!==SYNC.rev||!SYNC.base){SYNC.rev=j.rev;SYNC.base=remote;adoptDoc(remote);softRender()}
+  SYNC.status='ok';SYNC.lastOk=new Date().toISOString();
+ }catch(e){SYNC.status='error';console.warn('Đồng bộ thất bại:',e);throw e}
+ finally{SYNC.busy=false;syncSave();syncPaint()}
+}
+async function syncPush(attempt=0){
+ if(!SYNC_URL)return;if(SYNC.busy){syncSchedule();return}SYNC.busy=true;syncPaint();
+ const doc=syncDoc();
+ try{const j=await syncCall({action:'put',baseRev:SYNC.rev,doc});
+  if(j.ok){SYNC.rev=j.rev;SYNC.base=JSON.parse(JSON.stringify(doc));SYNC.dirty=!jsonEq(syncDoc(),doc);SYNC.status='ok';SYNC.lastOk=new Date().toISOString()}
+  else if(j.conflict&&attempt<4){const merged=mergeDoc(SYNC.base,syncDoc(),j.doc);SYNC.base=j.doc;SYNC.rev=j.rev;adoptDoc(merged);SYNC.busy=false;await syncPush(attempt+1);softRender();return}
+  else throw Error(j.error||'Không ghi được dữ liệu');
+ }catch(e){SYNC.status='error';console.warn('Đồng bộ thất bại:',e)}
+ finally{SYNC.busy=false;syncSave();syncPaint();if(SYNC.dirty&&SYNC.status==='ok')syncSchedule()}
+}
+function syncSchedule(){if(!SYNC_URL)return;SYNC.dirty=true;syncSave();syncPaint();clearTimeout(SYNC.timer);SYNC.timer=setTimeout(()=>syncPush(),700)}
+function syncStart(){
+ if(!SYNC_URL)return;
+ setInterval(()=>{if(SYNC.dirty&&SYNC.status==='error')syncPush();else syncPull().catch(()=>{})},SYNC_INTERVAL);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncPull().catch(()=>{})});
+ window.addEventListener('beforeunload',e=>{if(SYNC.dirty){e.preventDefault();e.returnValue=''}});
+}
+/* ĐĂNG NHẬP · TÀI KHOẢN LƯU CÙNG BỘ DỮ LIỆU (đồng bộ nếu có SYNC_URL) */
+function getUsers(){try{const users=JSON.parse(localStorage.getItem(USERS_KEY)||'[]');if(!Array.isArray(users))return [];users.forEach(u=>{if(LEGACY_ROLE[u.role])u.role=LEGACY_ROLE[u.role];delete u.sessionToken});return users}catch(e){return []}}
+function saveUsers(users,sync=true){users.forEach(u=>delete u.sessionToken);localStorage.setItem(USERS_KEY,JSON.stringify(users));if(sync)syncSchedule()}
+/* Tạo sẵn admin mặc định từ config.js khi hệ thống chưa có tài khoản nào (thay cho màn hình thiết lập lần đầu) */
+function ensureDefaultAdmin(){const users=getUsers();if(users.length)return;const a=window.APP_CONFIG?.DEFAULT_ADMIN;if(!a?.username||!a?.salt||!a?.passwordHash)throw Error('Thiếu DEFAULT_ADMIN trong config.js');saveUsers([{id:a.id||'ADMIN-DEFAULT',username:a.username,fullname:a.fullname||'Quản trị hệ thống',role:'admin',salt:a.salt,passwordHash:a.passwordHash,active:true,createdAt:new Date().toISOString(),lastLoginAt:'',loginCount:0}])}
 function authSalt(){const a=new Uint8Array(20);crypto.getRandomValues(a);return Array.from(a,x=>x.toString(16).padStart(2,'0')).join('')}
 async function hashPassword(password,salt){
  if(!globalThis.crypto?.subtle)throw Error('Trình duyệt không hỗ trợ mã hóa mật khẩu. Hãy dùng Chrome/Edge và mở từ file hoặc HTTPS.');
@@ -365,38 +444,33 @@ async function hashPassword(password,salt){
 function validUsername(value){return /^[a-z0-9._-]{3,32}$/.test(value)}
 function currentSession(){
  try{const session=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');
-  if(!session)return null;return getUsers().find(u=>u.id===session.id&&u.active&&u.sessionToken===session.token)||null;
+  if(!session)return null;return getUsers().find(u=>u.id===session.id&&u.active&&String(u.passwordHash||'').slice(0,24)===session.sig)||null;
  }catch(e){return null}
 }
 function establishSession(user){
  const users=getUsers();const u=users.find(x=>x.id===user.id);if(!u||!u.active)throw Error('Tài khoản chưa được kích hoạt');
- const a=new Uint8Array(24);crypto.getRandomValues(a);u.sessionToken=Array.from(a,x=>x.toString(16).padStart(2,'0')).join('');
  u.lastLoginAt=new Date().toISOString();u.loginCount=(u.loginCount||0)+1;saveUsers(users);
- sessionStorage.setItem(SESSION_KEY,JSON.stringify({id:u.id,token:u.sessionToken}));
+ sessionStorage.setItem(SESSION_KEY,JSON.stringify({id:u.id,sig:String(u.passwordHash).slice(0,24)}));
  AUTH=u;role=u.role;FINANCE_VISIBLE=false;page=landingPage();render();
 }
 function signOut(){try{sessionStorage.removeItem(SESSION_KEY)}catch(e){} AUTH=null;role='';FINANCE_VISIBLE=false;page='overview';closeModal();loginView();}
 function authCard(subtitle,fields,button){
- document.querySelector('#app').innerHTML=`<div class="auth-shell"><section class="auth-card"><div class="auth-brand"><div class="auth-badge">TT</div><div><strong>TRUNG TÂM DỊCH VỤ TÀI CHÍNH CÔNG HÀ TĨNH</strong><span>Hệ thống quản lý và điều hành nhiệm vụ</span></div></div><div class="auth-title">${subtitle}</div>${fields}<div class="auth-note"><strong>Lưu trữ nội bộ trên trình duyệt:</strong> Tài khoản, hồ sơ và phân quyền hiện lưu bằng localStorage của máy này, không đồng bộ giữa máy khác và không bảo đảm bảo mật cấp máy chủ.</div></section></div>`;
+ document.querySelector('#app').innerHTML=`<div class="auth-shell"><section class="auth-card"><div class="auth-brand"><div class="auth-badge">TT</div><div><strong>TRUNG TÂM DỊCH VỤ TÀI CHÍNH CÔNG HÀ TĨNH</strong><span>Hệ thống quản lý và điều hành nhiệm vụ</span></div></div><div class="auth-title">${subtitle}</div>${fields}<div class="auth-note">${SYNC_URL?'<strong>Dữ liệu dùng chung:</strong> Tài khoản và hồ sơ được đồng bộ qua máy chủ lưu trữ của Trung tâm (bản thử nghiệm), mọi máy thấy cùng một dữ liệu.':'<strong>Lưu trữ nội bộ trên trình duyệt:</strong> Tài khoản, hồ sơ và phân quyền hiện lưu bằng localStorage của máy này, không đồng bộ giữa máy khác và không bảo đảm bảo mật cấp máy chủ.'}</div></section></div>`;
 }
 function loginView(){
- if(getUsers().length===0){setupView();return}
+ try{ensureDefaultAdmin()}catch(ex){document.querySelector('#app').innerHTML='<div style="padding:40px">'+html(ex.message)+'</div>';return}
  authCard('<h1>Đăng nhập</h1><p>Sử dụng tài khoản do admin cấp để truy cập đúng chức năng.</p>',`<form id="local-login" class="auth-form"><label>Tên đăng nhập<input name="username" required autocomplete="username" autocapitalize="none" placeholder="Nhập tên đăng nhập" /></label><label>Mật khẩu<input name="password" type="password" required autocomplete="current-password" placeholder="Nhập mật khẩu" /></label><button class="btn primary" type="submit">Đăng nhập hệ thống</button><div class="auth-error" id="autherror" role="alert"></div></form>`);
- document.querySelector('#local-login').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,username=f.elements.username.value.trim().toLowerCase(),password=f.elements.password.value,err=document.querySelector('#autherror');err.textContent='';const user=getUsers().find(u=>u.username===username);if(!user||!user.active){err.textContent='Tên đăng nhập, mật khẩu không đúng hoặc tài khoản đã bị khóa.';return}try{if(await hashPassword(password,user.salt)!==user.passwordHash){err.textContent='Tên đăng nhập hoặc mật khẩu chưa đúng.';return}establishSession(user)}catch(ex){err.textContent=ex.message}});
-}
-function setupView(){
- authCard('<h1>Thiết lập quản trị lần đầu</h1><p>Chỉ tạo tài khoản admin đầu tiên trên trình duyệt này. Sau đó, admin cấp tài khoản cho các vai trò còn lại.</p>',`<form id="setup-form" class="auth-form"><label>Tên quản trị (chữ thường, không dấu)<input name="username" required minlength="3" maxlength="32" placeholder="Ví dụ: quantri" /></label><label>Họ và tên<input name="fullname" required maxlength="100" placeholder="Họ và tên người quản trị" /></label><label>Mật khẩu quản trị (ít nhất 8 ký tự)<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label><label>Nhập lại mật khẩu<input name="confirm" type="password" required minlength="8" autocomplete="new-password" /></label><button class="btn primary" type="submit">Tạo tài khoản admin đầu tiên</button><div id="autherror" class="auth-error" role="alert"></div></form>`);
- document.querySelector('#setup-form').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,err=document.querySelector('#autherror'),username=f.elements.username.value.trim().toLowerCase(),fullname=f.elements.fullname.value.trim();err.textContent='';if(getUsers().length){loginView();return}if(!validUsername(username)){err.textContent='Tên đăng nhập từ 3–32 ký tự, chỉ chữ thường, số, dấu chấm, gạch nối hoặc gạch dưới.';return}if(!fullname){err.textContent='Cần nhập họ tên';return}if(f.elements.password.value.length<8||f.elements.password.value!==f.elements.confirm.value){err.textContent='Mật khẩu phải có ít nhất 8 ký tự và hai lần nhập phải trùng nhau.';return}try{const salt=authSalt(),passwordHash=await hashPassword(f.elements.password.value,salt),user={id:uid(),username,fullname,role:'admin',salt,passwordHash,active:true,createdAt:new Date().toISOString(),lastLoginAt:'',loginCount:0,sessionToken:''};saveUsers([user]);establishSession(user);toast('Đã thiết lập tài khoản quản trị đầu tiên. Hãy tạo tài khoản nhân sự tại Quản lý người dùng.')}catch(ex){err.textContent='Không thể tạo tài khoản: '+ex.message}});
+ document.querySelector('#local-login').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,username=f.elements.username.value.trim().toLowerCase(),password=f.elements.password.value,err=document.querySelector('#autherror');err.textContent='';if(SYNC_URL)await syncPull().catch(()=>{});const user=getUsers().find(u=>u.username===username);if(!user||!user.active){err.textContent='Tên đăng nhập, mật khẩu không đúng hoặc tài khoản đã bị khóa.';return}try{if(await hashPassword(password,user.salt)!==user.passwordHash){err.textContent='Tên đăng nhập hoặc mật khẩu chưa đúng.';return}establishSession(user)}catch(ex){err.textContent=ex.message}});
 }
 function renderUsers(){
  if(role!=='admin')return '<section class="panel">Chỉ admin được quản lý người dùng.</section>';
  const users=getUsers(),active=users.filter(u=>u.active).length;
- return `${header('QUẢN TRỊ · CHỈ ADMIN','Quản lý tài khoản và phân quyền','Admin cấp tài khoản, thay đổi vai trò, khóa / mở khóa và đặt lại mật khẩu. Không có chức năng người dùng tự đăng ký.',btn('＋ Cấp tài khoản','new-user','','primary')+btn('↓ Sao lưu dữ liệu','export-json'))}<div class="kpis"><div class="kpi"><div class="label">TỔNG TÀI KHOẢN</div><div class="num">${users.length}</div></div><div class="kpi green"><div class="label">ĐANG HOẠT ĐỘNG</div><div class="num">${active}</div></div><div class="kpi red"><div class="label">ĐÃ KHÓA</div><div class="num">${users.length-active}</div></div><div class="kpi"><div class="label">NHÓM VAI TRÒ</div><div class="num">5</div></div></div><section class="panel"><div class="panelhead"><div><h2>Danh sách tài khoản</h2><p>Tên đăng nhập không thể thay đổi sau khi tạo. Mật khẩu được lưu dưới dạng dẫn xuất PBKDF2, không hiển thị.</p></div></div><div class="tablewrap"><table class="data-table"><thead><tr><th>Họ tên / Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th><th>Lượt đăng nhập</th><th>Thao tác</th></tr></thead><tbody>${users.map(u=>`<tr><td><b>${html(u.fullname)}</b><div class="itemsub">@${html(u.username)} ${u.id===AUTH.id?' · Tài khoản của tôi':''}</div></td><td>${html(roleName(u.role))}</td><td>${pill(u.active?'Đang hoạt động':'Đã khóa')}</td><td>${u.lastLoginAt?new Date(u.lastLoginAt).toLocaleString('vi-VN'):'Chưa đăng nhập'}</td><td>${u.loginCount||0}</td><td><div class="actions">${btn('Sửa quyền','edit-user',u.id,'small')}${btn('Đặt lại MK','reset-user-password',u.id,'small')}${u.id!==AUTH.id?btn(u.active?'Khóa':'Mở khóa','toggle-user',u.id,'small'):''}</div></td></tr>`).join('')}</tbody></table></div></section><section class="panel"><div class="panelhead"><h2>Chuyển dữ liệu từ bản HTML cũ</h2></div><p class="muted" style="line-height:1.8;margin-bottom:14px">Nếu cậu đã xuất bản sao JSON từ website trước, admin có thể nhập lại dữ liệu nhiệm vụ và hồ sơ. Chức năng này thay thế dữ liệu nghiệp vụ hiện tại sau khi xác nhận; không thay thế danh sách tài khoản.</p><input type="file" id="import-input" accept=".json,application/json" class="hide"/><div class="actions">${btn('↓ Sao lưu JSON trước khi nhập','export-json','','small')}${btn('↑ Khôi phục dữ liệu JSON','import-json','','primary')}</div></section><div class="notice">Lưu ý bảo mật: Do không có máy chủ và cơ sở dữ liệu tập trung, phân quyền localStorage chỉ kiểm soát giao diện và thao tác thông thường. Người có quyền truy cập trình duyệt / công cụ lập trình vẫn có thể can thiệp dữ liệu. Không dùng bản này làm hệ thống đa người dùng chính thức với dữ liệu công vụ.</div>`;
+ return `${header('QUẢN TRỊ · CHỈ ADMIN','Quản lý tài khoản và phân quyền','Admin cấp tài khoản, thay đổi vai trò, khóa / mở khóa và đặt lại mật khẩu. Không có chức năng người dùng tự đăng ký.',btn('＋ Cấp tài khoản','new-user','','primary')+btn('↓ Sao lưu dữ liệu','export-json'))}<div class="kpis"><div class="kpi"><div class="label">TỔNG TÀI KHOẢN</div><div class="num">${users.length}</div></div><div class="kpi green"><div class="label">ĐANG HOẠT ĐỘNG</div><div class="num">${active}</div></div><div class="kpi red"><div class="label">ĐÃ KHÓA</div><div class="num">${users.length-active}</div></div><div class="kpi"><div class="label">NHÓM VAI TRÒ</div><div class="num">${Object.keys(ROLE_LABELS).length}</div></div></div><section class="panel"><div class="panelhead"><div><h2>Danh sách tài khoản</h2><p>Tên đăng nhập không thể thay đổi sau khi tạo. Mật khẩu được lưu dưới dạng dẫn xuất PBKDF2, không hiển thị.</p></div></div><div class="tablewrap"><table class="data-table"><thead><tr><th>Họ tên / Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th><th>Lượt đăng nhập</th><th>Thao tác</th></tr></thead><tbody>${users.map(u=>`<tr><td><b>${html(u.fullname)}</b><div class="itemsub">@${html(u.username)} ${u.id===AUTH.id?' · Tài khoản của tôi':''}</div></td><td>${html(roleName(u.role))}</td><td>${pill(u.active?'Đang hoạt động':'Đã khóa')}</td><td>${u.lastLoginAt?new Date(u.lastLoginAt).toLocaleString('vi-VN'):'Chưa đăng nhập'}</td><td>${u.loginCount||0}</td><td><div class="actions">${btn('Sửa quyền','edit-user',u.id,'small')}${btn('Đặt lại MK','reset-user-password',u.id,'small')}${u.id!==AUTH.id?btn(u.active?'Khóa':'Mở khóa','toggle-user',u.id,'small'):''}</div></td></tr>`).join('')}</tbody></table></div></section><section class="panel"><div class="panelhead"><h2>Chuyển dữ liệu từ bản HTML cũ</h2></div><p class="muted" style="line-height:1.8;margin-bottom:14px">Nếu cậu đã xuất bản sao JSON từ website trước, admin có thể nhập lại dữ liệu nhiệm vụ và hồ sơ. Chức năng này thay thế dữ liệu nghiệp vụ hiện tại sau khi xác nhận; không thay thế danh sách tài khoản.</p><input type="file" id="import-input" accept=".json,application/json" class="hide"/><div class="actions">${btn('↓ Sao lưu JSON trước khi nhập','export-json','','small')}${btn('↑ Khôi phục dữ liệu JSON','import-json','','primary')}</div></section><div class="notice">Lưu ý bảo mật: Do không có máy chủ và cơ sở dữ liệu tập trung, phân quyền localStorage chỉ kiểm soát giao diện và thao tác thông thường. Người có quyền truy cập trình duyệt / công cụ lập trình vẫn có thể can thiệp dữ liệu. Không dùng bản này làm hệ thống đa người dùng chính thức với dữ liệu công vụ.</div>`;
 }
 function userForm(id=''){
  if(role!=='admin')return toast('Chỉ admin được cấp và sửa tài khoản.');
  const old=getUsers().find(u=>u.id===id),u=old||{username:'',fullname:'',role:'hcth_staff',active:true};
- modal(old?'Chỉnh sửa người dùng':'Cấp tài khoản mới',old?'Thay đổi họ tên và vai trò truy cập':'Không có đăng ký công khai; admin cấp tài khoản ở đây.',`<form id="user-form"><div class="formgrid">${formField('Tên đăng nhập','username',u.username,'text',true,old?'disabled':'pattern="[A-Za-z0-9._-]{3,32}" maxlength="32"')}${formField('Họ và tên','fullname',u.fullname,'text',true,'maxlength="100"')}${formSelect('Phân quyền','role',Object.entries(ROLE_LABELS).map(([value,label])=>({value,label})),u.role,old&&old.id===AUTH.id?'disabled':'')}${!old?formField('Mật khẩu (ít nhất 8 ký tự)','password','','password',true,'minlength="8" autocomplete="new-password"'):''}<div class="hint full">${old?'Muốn thay đổi mật khẩu, dùng nút “Đặt lại MK” trong danh sách người dùng.':'Lưu xong, nhân sự đăng nhập bằng tên đăng nhập và mật khẩu này trên cùng trình duyệt.'}</div></div><div class="formfooter" style="padding-left:0;padding-right:0">${btn('Hủy','close-modal')}<button type="submit" class="btn primary">${old?'Lưu thay đổi':'Tạo tài khoản'}</button></div></form>`);
+ modal(old?'Chỉnh sửa người dùng':'Cấp tài khoản mới',old?'Thay đổi họ tên và vai trò truy cập':'Không có đăng ký công khai; admin cấp tài khoản ở đây.',`<form id="user-form"><div class="formgrid">${formField('Tên đăng nhập','username',u.username,'text',true,old?'disabled':'pattern="[A-Za-z0-9._\\-]{3,32}" maxlength="32"')}${formField('Họ và tên','fullname',u.fullname,'text',true,'maxlength="100"')}${formSelect('Phân quyền','role',Object.entries(ROLE_LABELS).map(([value,label])=>({value,label})),u.role,old&&old.id===AUTH.id?'disabled':'')}${!old?formField('Mật khẩu (ít nhất 8 ký tự)','password','','password',true,'minlength="8" autocomplete="new-password"'):''}<div class="hint full">${old?'Muốn thay đổi mật khẩu, dùng nút “Đặt lại MK” trong danh sách người dùng.':'Lưu xong, nhân sự đăng nhập bằng tên đăng nhập và mật khẩu này trên cùng trình duyệt.'}</div></div><div class="formfooter" style="padding-left:0;padding-right:0">${btn('Hủy','close-modal')}<button type="submit" class="btn primary">${old?'Lưu thay đổi':'Tạo tài khoản'}</button></div></form>`);
  document.querySelector('#user-form').addEventListener('submit',async e=>{e.preventDefault();if(role!=='admin')return;const f=e.currentTarget,v=Object.fromEntries(new FormData(f).entries());const username=(old?old.username:v.username).trim().toLowerCase(),fullname=(v.fullname||'').trim();if(!validUsername(username)||!fullname)return toast('Kiểm tra lại tên đăng nhập và họ tên.');if(!ROLE_LABELS[v.role]&&!(old?.id===AUTH.id))return toast('Vai trò không hợp lệ.');const users=getUsers();if(!old&&users.some(x=>x.username===username))return toast('Tên đăng nhập đã tồn tại.');if(old){const target=users.find(x=>x.id===id);if(!target)return;const nextRole=old.id===AUTH.id?'admin':v.role;if(target.role==='admin'&&nextRole!=='admin'&&users.filter(x=>x.role==='admin'&&x.active).length<=1)return toast('Không thể hạ quyền admin đang hoạt động cuối cùng.');target.fullname=fullname;target.role=nextRole;target.updatedAt=new Date().toISOString();saveUsers(users);if(target.id===AUTH.id){AUTH=target;role=target.role}closeModal();persist('Điều chỉnh tài khoản','Người dùng',id,`${username} · ${roleName(nextRole)}`);toast('Đã cập nhật phân quyền. Tài khoản cần đăng nhập lại để thấy quyền mới.');return}if(v.password.length<8)return toast('Mật khẩu tối thiểu 8 ký tự.');try{const salt=authSalt(),passwordHash=await hashPassword(v.password,salt),newUser={id:uid(),username,fullname,role:v.role,salt,passwordHash,active:true,createdAt:new Date().toISOString(),lastLoginAt:'',loginCount:0,sessionToken:''};users.push(newUser);saveUsers(users);closeModal();persist('Cấp tài khoản mới','Người dùng',newUser.id,`${username} · ${roleName(v.role)}`);toast('Đã cấp tài khoản '+username)}catch(ex){toast(ex.message)}});
 }
 function toggleUser(id){if(role!=='admin'||id===AUTH.id)return toast('Không thể khóa tài khoản của chính mình.');const users=getUsers(),u=users.find(x=>x.id===id);if(!u)return;if(u.role==='admin'&&u.active&&users.filter(x=>x.role==='admin'&&x.active).length===1)return toast('Cần còn ít nhất một admin hoạt động.');if(!confirm((u.active?'Khóa':'Mở khóa')+' tài khoản '+u.username+'?'))return;u.active=!u.active;u.sessionToken='';u.updatedAt=new Date().toISOString();saveUsers(users);persist(u.active?'Mở khóa tài khoản':'Khóa tài khoản','Người dùng',u.id,u.username);toast('Đã cập nhật trạng thái tài khoản')}
@@ -426,7 +500,7 @@ function actionClick(e){
  if(!canRunAction(a,id))return toast('Tài khoản không được cấp quyền thực hiện thao tác này.');
  switch(a){
  case 'submit-report':submitReport();break;case 'close-report':closeReport();break;case 'view-report':viewReport();break;case 'reopen-report':reopenReport();break;
- case 'new-task':openTaskForm('',id||(role==='technical_staff'?'DVC':'HCTH'));break;case 'edit-task':closeModal();openTaskForm(id);break;case 'view-task':taskDetails(id);break;case 'verify-task':taskVerify(id);break;case 'reopen-task':taskReopen(id);break;
+ case 'new-task':openTaskForm('',id||(isTech()?'DVC':'HCTH'));break;case 'edit-task':closeModal();openTaskForm(id);break;case 'view-task':taskDetails(id);break;case 'verify-task':taskVerify(id);break;case 'reopen-task':taskReopen(id);break;
  case 'new-case':openCaseForm();break;case 'edit-case':closeModal();openCaseForm(id);break;case 'view-case':caseDetails(id);break;case 'issue-case':closeModal();issueForm(id);break;case 'payment':closeModal();paymentForm(id);break;
  case 'close-modal':closeModal();break;case 'go-cases':page='cases';render();break;case 'go-revenue':page='revenue';render();break;
  case 'toggle-finance':FINANCE_VISIBLE=!FINANCE_VISIBLE;render();break;
@@ -466,11 +540,15 @@ function dataChange(e){const el=e.target;
 }
 
 function searchInput(e){const el=e.target;if(!['tasksearch','casesearch'].includes(el.id))return;let pos=el.selectionStart;search=el.value;render();const newEl=document.getElementById(el.id);if(newEl){newEl.focus();try{newEl.setSelectionRange(pos,pos)}catch{}}}
-function init(){
+async function init(){
  document.addEventListener('click',actionClick);
  document.addEventListener('change',dataChange);
  document.addEventListener('input',searchInput);
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+ if(SYNC_URL){document.querySelector('#app').innerHTML='<div class="auth-shell"><section class="auth-card"><div class="auth-title"><h1>Đang tải dữ liệu…</h1><p>Đang kết nối máy chủ lưu trữ dùng chung.</p></div></section></div>';
+  try{await syncPull()}catch(e){toast('Không kết nối được máy chủ dữ liệu, đang dùng bản lưu trên máy này.')}
+  if(SYNC.dirty)syncPush();syncStart()}
+ try{ensureDefaultAdmin()}catch(e){console.error(e)}
  AUTH=currentSession();role=AUTH?.role||'';page=AUTH?landingPage():'overview';render();
 }
 
